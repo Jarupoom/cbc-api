@@ -3,9 +3,6 @@ import pickle
 import numpy as np
 import os
 
-# Set headless mode for Qt (required for Orange3 in headless environments)
-os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-
 app = Flask(__name__)
 
 # Load model
