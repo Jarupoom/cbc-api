@@ -1,5 +1,5 @@
 flask
 numpy
-scikit-learn
+scikit-learn==1.5.2
 Orange3
 PyQt5
