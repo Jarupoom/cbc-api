@@ -2,8 +2,6 @@ from flask import Flask, request, jsonify # type: ignore
 import pickle
 import numpy as np # type: ignore
 import os
-import json
-from collections import OrderedDict
 
 def classify_pattern(data):
     # Thalassemia pattern:
@@ -64,19 +62,13 @@ def predict():
 
     pattern = classify_pattern(data)
 
-    response = OrderedDict([
-        ("Status", status),
-        ("Risk_level", risk),
-        ("Pattern_analysis", pattern),
-        ("Guidance", recommendation),
-        ("Confidence", f"{confidence}%")
-    ])
-
-    return app.response_class(
-        response=json.dumps(response),
-        status=200,
-        mimetype='application/json'
-    )
+    return jsonify({
+        "Confidence": f"{confidence}%",
+        "Status": status,
+        "Risk_level": risk,
+        "Pattern_analysis": pattern,
+        "Guidance": recommendation
+    })
 
 
 if __name__ == "__main__":
