@@ -1,48 +1,9 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify # type: ignore
 import pickle
-import numpy as np
+import numpy as np # type: ignore
 import os
-
-def explain_cbc(data):
-    reasons = []
-
-    if data["MCV"] < 80:
-        reasons.append("Low MCV indicates microcytic red blood cells")
-
-    if data["MCH"] < 27:
-        reasons.append("Low MCH suggests reduced hemoglobin per cell")
-
-    if data["RBC"] > 5.5:
-        reasons.append("Elevated RBC count is commonly seen in thalassemia")
-
-    if data["RDW"] > 15:
-        reasons.append("High RDW indicates variation in red blood cell size")
-
-    if not reasons:
-        reasons.append("CBC parameters are within normal range")
-
-    return reasons
-
-def validate_cbc(data):
-    if not (3.0 <= data["RBC"] <= 8.0):
-        return "RBC value is out of valid human range"
-
-    if not (5.0 <= data["Hb"] <= 18.0):
-        return "Hemoglobin value is out of valid human range"
-
-    if not (60 <= data["MCV"] <= 120):
-        return "MCV value is out of valid human range"
-
-    if not (15 <= data["MCH"] <= 40):
-        return "MCH value is out of valid human range"
-
-    if not (25 <= data["MCHC"] <= 38):
-        return "MCHC value is out of valid human range"
-
-    if not (10 <= data["RDW"] <= 25):
-        return "RDW value is out of valid human range"
-
-    return None  # means valid
+import json
+from collections import OrderedDict
 
 def classify_pattern(data):
     # Thalassemia pattern:
@@ -71,12 +32,6 @@ model = pickle.load(open("Thalacheck.pkcls", "rb"))
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.json
-    error = validate_cbc(data)
-    if error:
-        return jsonify({
-            "error": error,
-            "note": "Invalid input values. Please recheck CBC data."
-        }), 400
 
     # CBC inputs (must match Orange order)
     features = np.array([[
@@ -95,29 +50,33 @@ def predict():
 
     if confidence < 65:
         status = "Uncertain"
-        risk = "Uncertain Result"
+        risk = "Uncertain Result ❌"
         recommendation = "Repeat CBC test or seek further laboratory confirmation."
     else:
         if prediction == 1:
             status = "Patient"
-            risk = "High Risk"
+            risk = "High Risk ⚠️"
             recommendation = "Recommend hemoglobin electrophoresis and physician evaluation."
         else:
             status = "Normal"
-            risk = "Low Risk"
+            risk = "Low Risk ✅"
             recommendation = "No abnormal findings detected in screening."
 
     pattern = classify_pattern(data)
-    explanation = explain_cbc(data)
-    
-    return jsonify({
-        "status": status,
-        "risk_level": risk,
-        "confidence": f"{confidence}%",
-        "pattern_analysis": pattern,
-        "explanation": explanation,
-        "recommendation": recommendation
-    })
+
+    response = OrderedDict([
+        ("Status", status),
+        ("Risk_level", risk),
+        ("Pattern_analysis", pattern),
+        ("Guidance", recommendation),
+        ("Confidence", f"{confidence}%")
+    ])
+
+    return app.response_class(
+        response=json.dumps(response),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 if __name__ == "__main__":
